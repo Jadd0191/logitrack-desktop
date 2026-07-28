@@ -1,5 +1,5 @@
 """
-Tests para la Fase 2 - Widgets básicos
+Tests para la Fase 3 - Layouts y geometría
 """
 
 import pytest
@@ -25,8 +25,8 @@ def test_window_creation(window):
     """Test 1: Verifica que la ventana se crea correctamente"""
     assert window is not None
     assert window.windowTitle() == "LogiTrack Desktop"
-    assert window.minimumSize().width() == 1200
-    assert window.minimumSize().height() == 700
+    assert window.minimumSize().width() == 1000  # ✅ Actualizado Fase 3
+    assert window.minimumSize().height() == 650  # ✅ Actualizado Fase 3
 
 
 def test_window_has_table(window):

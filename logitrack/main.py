@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 LogiTrack Desktop - Aplicación principal
-Fase 2: Ventana principal con widgets básicos
+Fase 3: Gestión de geometría y layouts responsivos
 """
 
 import sys
@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
+    QGridLayout,
     QLabel,
     QLineEdit,
     QComboBox,
@@ -20,24 +21,27 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
     QGroupBox,
     QMessageBox,
-    QStatusBar,
     QHeaderView,
+    QSplitter,
+    QFrame,
+    QSizePolicy,
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QAction, QKeySequence
 
 
 class LogiTrackWindow(QMainWindow):
-    """Ventana principal de LogiTrack Desktop"""
+    """Ventana principal de LogiTrack Desktop - Fase 3"""
 
     def __init__(self):
         super().__init__()
 
         # Configuración básica
         self.setWindowTitle("LogiTrack Desktop")
-        self.setMinimumSize(1200, 700)
+        self.setMinimumSize(1000, 650)
+        self.resize(1200, 750)
 
-        # Datos en memoria (temporal)
+        # Datos en memoria
         self.shipments = []
         self.next_id = 1
 
@@ -54,41 +58,55 @@ class LogiTrackWindow(QMainWindow):
         """Configura la barra de menú"""
         menubar = self.menuBar()
 
-        # Menú Archivo
         file_menu = menubar.addMenu("&Archivo")
         exit_action = QAction("&Salir", self)
         exit_action.setShortcut(QKeySequence.StandardKey.Quit)
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
-        # Menú Envíos
         shipments_menu = menubar.addMenu("&Envíos")
         new_action = QAction("&Nuevo Envío", self)
         new_action.setShortcut(QKeySequence.StandardKey.New)
         new_action.triggered.connect(self._clear_form)
         shipments_menu.addAction(new_action)
 
-        # Menú Ayuda
         help_menu = menubar.addMenu("&Ayuda")
         about_action = QAction("&Acerca de", self)
         about_action.triggered.connect(self._show_about)
         help_menu.addAction(about_action)
 
     def _setup_central_widget(self):
-        """Configura el widget central con tabla y formulario"""
+        """Configura el widget central con layouts responsivos"""
         central_widget = QWidget()
-        main_layout = QHBoxLayout()
+        
+        # Layout principal - Vertical
+        main_layout = QVBoxLayout()
         main_layout.setSpacing(10)
+        main_layout.setContentsMargins(10, 10, 10, 10)
 
-        # ===== PANEL IZQUIERDO: Tabla de envíos =====
-        left_panel = QWidget()
-        left_layout = QVBoxLayout()
+        # ===== SPLITTER: Tabla (izquierda) + Formulario (derecha) =====
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setHandleWidth(5)
+        splitter.setChildrenCollapsible(False)
+
+        # --- Panel izquierdo: Tabla ---
+        left_widget = QWidget()
+        left_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        left_layout = QVBoxLayout(left_widget)
+        left_layout.setSpacing(8)
+        left_layout.setContentsMargins(5, 5, 5, 5)
 
         # Título de la tabla
         table_title = QLabel("📋 Lista de Envíos")
-        table_title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        table_title.setStyleSheet("""
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            padding: 5px 0px;
+        """)
+        left_layout.addWidget(table_title)
 
-        # Tabla de envíos
+        # Tabla
         self.table = QTableWidget()
         self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
@@ -97,127 +115,187 @@ class LogiTrackWindow(QMainWindow):
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.table.setAlternatingRowColors(True)
         self.table.setSortingEnabled(True)
-
-        left_layout.addWidget(table_title)
+        self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         left_layout.addWidget(self.table)
-        left_panel.setLayout(left_layout)
 
-        # ===== PANEL DERECHO: Formulario de alta =====
-        right_panel = QWidget()
-        right_panel.setMaximumWidth(350)
-        right_layout = QVBoxLayout()
+        # --- Panel derecho: Formulario ---
+        right_widget = QWidget()
+        right_widget.setMaximumWidth(380)
+        right_widget.setMinimumWidth(280)
+        right_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        right_layout = QVBoxLayout(right_widget)
+        right_layout.setSpacing(10)
+        right_layout.setContentsMargins(5, 5, 5, 5)
 
-        # Grupo del formulario
+        # Grupo: Nuevo Envío
         form_group = QGroupBox("📝 Nuevo Envío")
-        form_layout = QVBoxLayout()
+        form_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                font-size: 13px;
+                padding-top: 15px;
+                margin-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0px 5px 0px 5px;
+            }
+        """)
+        
+        # Layout interno del grupo - Grid para mejor alineación
+        form_layout = QGridLayout()
+        form_layout.setVerticalSpacing(10)
+        form_layout.setHorizontalSpacing(8)
+        form_layout.setContentsMargins(15, 20, 15, 15)
 
-        # Campo: Destinatario
-        form_layout.addWidget(QLabel("Destinatario:"))
+        # Fila 0: Destinatario
+        form_layout.addWidget(QLabel("Destinatario:"), 0, 0)
         self.destinatario_input = QLineEdit()
-        self.destinatario_input.setPlaceholderText("Nombre del destinatario")
-        form_layout.addWidget(self.destinatario_input)
+        self.destinatario_input.setPlaceholderText("Nombre completo")
+        self.destinatario_input.setMinimumHeight(30)
+        form_layout.addWidget(self.destinatario_input, 0, 1)
 
-        # Campo: Dirección
-        form_layout.addWidget(QLabel("Dirección:"))
+        # Fila 1: Dirección
+        form_layout.addWidget(QLabel("Dirección:"), 1, 0)
         self.direccion_input = QLineEdit()
         self.direccion_input.setPlaceholderText("Calle y número")
-        form_layout.addWidget(self.direccion_input)
+        self.direccion_input.setMinimumHeight(30)
+        form_layout.addWidget(self.direccion_input, 1, 1)
 
-        # Campo: Tipo
-        form_layout.addWidget(QLabel("Tipo de envío:"))
+        # Fila 2: Tipo
+        form_layout.addWidget(QLabel("Tipo:"), 2, 0)
         self.tipo_combo = QComboBox()
         self.tipo_combo.addItems(["Paquete", "Documento", "Carga", "Mercancía"])
-        form_layout.addWidget(self.tipo_combo)
+        self.tipo_combo.setMinimumHeight(30)
+        form_layout.addWidget(self.tipo_combo, 2, 1)
 
-        # Campo: Estado
-        form_layout.addWidget(QLabel("Estado:"))
+        # Fila 3: Estado
+        form_layout.addWidget(QLabel("Estado:"), 3, 0)
         self.estado_combo = QComboBox()
         self.estado_combo.addItems(["Pendiente", "En ruta", "Entregado", "Retrasado"])
-        form_layout.addWidget(self.estado_combo)
+        self.estado_combo.setMinimumHeight(30)
+        form_layout.addWidget(self.estado_combo, 3, 1)
 
-        # Botones
+        # Fila 4: Botones (ocupan 2 columnas)
         button_layout = QHBoxLayout()
+        button_layout.setSpacing(10)
 
         self.guardar_btn = QPushButton("💾 Guardar")
-        self.guardar_btn.setStyleSheet("background-color: #28a745; color: white; font-weight: bold;")
+        self.guardar_btn.setMinimumHeight(35)
+        self.guardar_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #28a745;
+                color: white;
+                font-weight: bold;
+                border-radius: 4px;
+                padding: 5px 15px;
+            }
+            QPushButton:hover {
+                background-color: #218838;
+            }
+        """)
         self.guardar_btn.clicked.connect(self._save_shipment)
 
         self.limpiar_btn = QPushButton("🧹 Limpiar")
+        self.limpiar_btn.setMinimumHeight(35)
+        self.limpiar_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #6c757d;
+                color: white;
+                font-weight: bold;
+                border-radius: 4px;
+                padding: 5px 15px;
+            }
+            QPushButton:hover {
+                background-color: #5a6268;
+            }
+        """)
         self.limpiar_btn.clicked.connect(self._clear_form)
 
         button_layout.addWidget(self.guardar_btn)
         button_layout.addWidget(self.limpiar_btn)
+        form_layout.addLayout(button_layout, 4, 0, 1, 2)
 
-        form_layout.addLayout(button_layout)
+        # Fila 5: Línea separadora
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addWidget(separator, 5, 0, 1, 2)
 
-        # Campo de búsqueda
-        form_layout.addWidget(QLabel("🔍 Buscar:"))
+        # Fila 6: Búsqueda
+        form_layout.addWidget(QLabel("🔍 Buscar:"), 6, 0)
         self.buscar_input = QLineEdit()
         self.buscar_input.setPlaceholderText("Buscar envíos...")
+        self.buscar_input.setMinimumHeight(30)
         self.buscar_input.textChanged.connect(self._filter_table)
-        form_layout.addWidget(self.buscar_input)
+        form_layout.addWidget(self.buscar_input, 6, 1)
 
         form_group.setLayout(form_layout)
         right_layout.addWidget(form_group)
 
         # Contador de envíos
-        self.counter_label = QLabel("Total de envíos: 0")
-        self.counter_label.setStyleSheet("font-size: 12px; color: #6c757d; padding: 5px;")
+        self.counter_label = QLabel("📊 Total: 0 envíos")
+        self.counter_label.setStyleSheet("""
+            font-size: 12px;
+            color: #6c757d;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        """)
         right_layout.addWidget(self.counter_label)
 
         right_layout.addStretch()
-        right_panel.setLayout(right_layout)
 
-        # ===== ARMAR LAYOUT PRINCIPAL =====
-        main_layout.addWidget(left_panel, 7)   # 70% del espacio
-        main_layout.addWidget(right_panel, 3)   # 30% del espacio
+        # --- Agregar widgets al splitter ---
+        splitter.addWidget(left_widget)
+        splitter.addWidget(right_widget)
+        splitter.setSizes([700, 300])  # Proporción 70/30
 
+        main_layout.addWidget(splitter)
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
     def _setup_status_bar(self):
         """Configura la barra de estado"""
-        self.statusBar().showMessage("✅ Listo | Fase 2: Widgets básicos")
+        self.statusBar().showMessage("✅ Listo | Fase 3: Layouts responsivos")
 
     def _setup_shortcuts(self):
         """Configura atajos de teclado"""
-        # Ctrl+N: Nuevo envío (limpiar formulario)
         new_shortcut = QAction("Nuevo", self)
         new_shortcut.setShortcut(QKeySequence.StandardKey.New)
         new_shortcut.triggered.connect(self._clear_form)
         self.addAction(new_shortcut)
 
-        # Ctrl+S: Guardar
         save_shortcut = QAction("Guardar", self)
         save_shortcut.setShortcut(QKeySequence.StandardKey.Save)
         save_shortcut.triggered.connect(self._save_shipment)
         self.addAction(save_shortcut)
 
-        # Esc: Limpiar
         esc_shortcut = QAction("Limpiar", self)
         esc_shortcut.setShortcut(QKeySequence.StandardKey.Cancel)
         esc_shortcut.triggered.connect(self._clear_form)
         self.addAction(esc_shortcut)
 
     def _load_sample_data(self):
-        """Carga datos de ejemplo para la tabla"""
+        """Carga datos de ejemplo"""
         sample_data = [
             ("María González", "Av. Principal 123", "Paquete", "Entregado"),
             ("Carlos Rodríguez", "Calle 45 #23", "Documento", "En ruta"),
             ("Ana Martínez", "Blvd. Norte 789", "Mercancía", "Pendiente"),
+            ("Luis Pérez", "Calle Sur 456", "Carga", "Retrasado"),
         ]
         for destinatario, direccion, tipo, estado in sample_data:
             self._add_shipment_to_table(destinatario, direccion, tipo, estado)
-
         self._update_counter()
 
     def _add_shipment_to_table(self, destinatario, direccion, tipo, estado):
-        """Añade un envío a la tabla y a la lista en memoria"""
+        """Añade un envío a la tabla"""
         shipment_id = self.next_id
         self.next_id += 1
         fecha = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-        # Guardar en memoria
         self.shipments.append({
             "id": shipment_id,
             "destinatario": destinatario,
@@ -227,7 +305,6 @@ class LogiTrackWindow(QMainWindow):
             "fecha": fecha
         })
 
-        # Añadir a la tabla
         row = self.table.rowCount()
         self.table.insertRow(row)
         self.table.setItem(row, 0, QTableWidgetItem(str(shipment_id)))
@@ -237,9 +314,38 @@ class LogiTrackWindow(QMainWindow):
         self.table.setItem(row, 4, QTableWidgetItem(estado))
         self.table.setItem(row, 5, QTableWidgetItem(fecha))
 
+        # Colorear estado
+        self._color_status_cell(row)
+
+    def _color_status_cell(self, row):
+        """Colorea la celda de estado según su valor"""
+        estado_item = self.table.item(row, 4)
+        if estado_item:
+            estado = estado_item.text()
+            colors = {
+                "Entregado": "#28a745",
+                "En ruta": "#ffc107",
+                "Pendiente": "#17a2b8",
+                "Retrasado": "#dc3545"
+            }
+            color = colors.get(estado, "#6c757d")
+            estado_item.setBackground(self._get_color(color))
+            
+            # Texto blanco para fondos oscuros
+            if estado in ["Entregado", "Retrasado"]:
+                estado_item.setForeground(Qt.GlobalColor.white)
+            else:
+                estado_item.setForeground(Qt.GlobalColor.black)
+
+    def _get_color(self, hex_color):
+        """Convierte hex a QColor"""
+        from PyQt6.QtGui import QColor
+        hex_color = hex_color.lstrip("#")
+        r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        return QColor(r, g, b)
+
     def _save_shipment(self):
-        """Guarda un nuevo envío desde el formulario"""
-        # Validar campos
+        """Guarda un nuevo envío"""
         destinatario = self.destinatario_input.text().strip()
         direccion = self.direccion_input.text().strip()
 
@@ -256,13 +362,10 @@ class LogiTrackWindow(QMainWindow):
         tipo = self.tipo_combo.currentText()
         estado = self.estado_combo.currentText()
 
-        # Añadir envío
         self._add_shipment_to_table(destinatario, direccion, tipo, estado)
         self._update_counter()
         self._clear_form()
-
-        # Feedback
-        self.statusBar().showMessage(f"✅ Envío #{self.next_id - 1} guardado correctamente", 3000)
+        self.statusBar().showMessage(f"✅ Envío #{self.next_id - 1} guardado", 3000)
 
     def _clear_form(self):
         """Limpia el formulario"""
@@ -290,28 +393,27 @@ class LogiTrackWindow(QMainWindow):
         """Actualiza el contador de envíos"""
         total = self.table.rowCount()
         visible = sum(1 for row in range(self.table.rowCount()) if not self.table.isRowHidden(row))
-        self.counter_label.setText(f"Total de envíos: {total} | Visibles: {visible}")
+        self.counter_label.setText(f"📊 Total: {total} envíos | Visibles: {visible}")
 
     def _show_about(self):
-        """Muestra el diálogo Acerca de"""
+        """Diálogo Acerca de"""
         QMessageBox.about(
             self,
             "Acerca de LogiTrack Desktop",
             """
             <h2>🚚 LogiTrack Desktop</h2>
-            <p><b>Versión:</b> 0.2.0 (Fase 2)</p>
+            <p><b>Versión:</b> 0.3.0 (Fase 3)</p>
             <p><b>Framework:</b> PyQt6</p>
-            <p><b>Descripción:</b> Estación de Control Logístico de Escritorio</p>
             <p><b>Características:</b></p>
             <ul>
-                <li>📝 Registro de envíos</li>
-                <li>📋 Tabla interactiva</li>
+                <li>📐 Layouts responsivos</li>
+                <li>📋 Tabla con colores por estado</li>
+                <li>📝 Formulario con grid layout</li>
                 <li>🔍 Búsqueda en tiempo real</li>
-                <li>⌨️ Atajos de teclado</li>
             </ul>
             <hr>
             <p style="color: #7f8c8d; font-size: 10px;">
-                🚀 Proyecto Integrador - Fase 2
+                🚀 Proyecto Integrador - Fase 3
             </p>
             """,
         )
