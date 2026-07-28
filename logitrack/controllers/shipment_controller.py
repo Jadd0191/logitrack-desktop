@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 LogiTrack Desktop - Controlador de Envíos
-Fase 6: Arquitectura MVC/MVVM
+Fase 7: Integración de datos: BBDD y API
 """
 
 from typing import List, Dict, Any, Optional
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, pyqtSignal  # ✅ Importación correcta
 
 from ..models import Shipment, ShipmentStatus
 from ..services import ShipmentService
@@ -24,6 +24,8 @@ class ShipmentController(QObject):
     shipment_deleted = pyqtSignal(int)
     stats_updated = pyqtSignal(dict)
     error_occurred = pyqtSignal(str)
+    sync_complete = pyqtSignal(dict)
+    api_status_changed = pyqtSignal(bool)
     
     def __init__(self, service: ShipmentService):
         super().__init__()
@@ -129,6 +131,33 @@ class ShipmentController(QObject):
         except Exception as e:
             self.error_occurred.emit(f"Error al obtener estadísticas: {str(e)}")
             return {}
+
+    def sync_with_api(self) -> Dict[str, Any]:
+        """Sincroniza con la API central"""
+        try:
+            result = self._service.sync_with_api()
+            self.sync_complete.emit(result)
+            return result
+        except Exception as e:
+            self.error_occurred.emit(f"Error al sincronizar: {str(e)}")
+            return {"status": "error", "message": str(e)}
+
+    def get_sync_logs(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Obtiene logs de sincronización"""
+        try:
+            return self._service.get_sync_logs(limit)
+        except Exception as e:
+            self.error_occurred.emit(f"Error al obtener logs: {str(e)}")
+            return []
+
+    def set_online_status(self, is_online: bool):
+        """Cambia el estado de conexión"""
+        self._service.set_online_status(is_online)
+        self.api_status_changed.emit(is_online)
+
+    def is_api_online(self) -> bool:
+        """Verifica estado de la API"""
+        return self._service.is_api_online()
 
     def _update_stats(self):
         """Actualiza y emite las estadísticas"""

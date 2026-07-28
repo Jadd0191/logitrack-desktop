@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 LogiTrack Desktop - Modelo de Envío
-Fase 6: Arquitectura MVC/MVVM
+Fase 7: Integración de datos: BBDD y API
 """
 
 from dataclasses import dataclass, field
@@ -24,6 +24,12 @@ class Shipment:
     fecha: str = field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M"))
     observaciones: Optional[str] = None
     tracking_id: Optional[str] = None
+    # Datos enriquecidos por API
+    distancia_km: Optional[float] = None
+    tiempo_estimado: Optional[str] = None
+    clima: Optional[str] = None
+    zona: Optional[str] = None
+    api_data: Optional[Dict[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self):
         """Validaciones después de la inicialización"""
@@ -51,11 +57,24 @@ class Shipment:
             "fecha": self.fecha,
             "observaciones": self.observaciones,
             "tracking_id": self.tracking_id,
+            "distancia_km": self.distancia_km,
+            "tiempo_estimado": self.tiempo_estimado,
+            "clima": self.clima,
+            "zona": self.zona,
+            "api_data": json.dumps(self.api_data) if self.api_data else None,
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Shipment":
         """Crea un Shipment desde un diccionario"""
+        # Manejar api_data si viene como string JSON
+        api_data = data.get("api_data")
+        if isinstance(api_data, str):
+            try:
+                api_data = json.loads(api_data)
+            except:
+                api_data = {}
+
         return cls(
             id=data.get("id", 0),
             destinatario=data.get("destinatario", ""),
@@ -65,6 +84,11 @@ class Shipment:
             fecha=data.get("fecha", datetime.now().strftime("%Y-%m-%d %H:%M")),
             observaciones=data.get("observaciones"),
             tracking_id=data.get("tracking_id"),
+            distancia_km=data.get("distancia_km"),
+            tiempo_estimado=data.get("tiempo_estimado"),
+            clima=data.get("clima"),
+            zona=data.get("zona"),
+            api_data=api_data,
         )
 
     def to_json(self) -> str:
