@@ -1,26 +1,14 @@
 """
-Tests básicos para la Fase 1 - LogiTrack Desktop
-Estos tests verifican que la ventana principal se crea correctamente.
+Tests para la Fase 2 - Widgets básicos
 """
 
 import pytest
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import Qt
-
-# Importar la ventana desde el módulo principal
 from logitrack.main import LogiTrackWindow
 
 
-# ========================================
-# FIXTURES (configuración para los tests)
-# ========================================
-
 @pytest.fixture(scope="session")
 def app():
-    """
-    Fixture que proporciona una instancia de QApplication.
-    Scope="session" significa que se crea una sola vez para todos los tests.
-    """
     app = QApplication.instance()
     if app is None:
         app = QApplication([])
@@ -29,69 +17,61 @@ def app():
 
 @pytest.fixture
 def window(app):
-    """
-    Fixture que proporciona una instancia de LogiTrackWindow.
-    Se crea una nueva ventana para cada test.
-    """
     window = LogiTrackWindow()
     return window
 
 
-# ========================================
-# TESTS - 6 pruebas en total
-# ========================================
-
 def test_window_creation(window):
-    """
-    Test 1: Verifica que la ventana se crea correctamente.
-    """
+    """Test 1: Verifica que la ventana se crea correctamente"""
     assert window is not None
     assert window.windowTitle() == "LogiTrack Desktop"
-    assert window.minimumSize().width() == 1024
-    assert window.minimumSize().height() == 768
+    assert window.minimumSize().width() == 1200
+    assert window.minimumSize().height() == 700
 
 
-def test_window_has_status_bar(window):
-    """
-    Test 2: Verifica que la ventana tiene barra de estado.
-    """
-    status_bar = window.statusBar()
-    assert status_bar is not None
-    current_message = status_bar.currentMessage()
-    assert current_message is not None
-    assert len(current_message) > 0
+def test_window_has_table(window):
+    """Test 2: Verifica que la tabla existe"""
+    assert hasattr(window, 'table')
+    assert window.table is not None
+    assert window.table.columnCount() == 6
 
 
-def test_window_has_menu_bar(window):
-    """
-    Test 3: Verifica que la ventana tiene barra de menú.
-    """
-    menu_bar = window.menuBar()
-    assert menu_bar is not None
+def test_window_has_form_fields(window):
+    """Test 3: Verifica que los campos del formulario existen"""
+    assert hasattr(window, 'destinatario_input')
+    assert hasattr(window, 'direccion_input')
+    assert hasattr(window, 'tipo_combo')
+    assert hasattr(window, 'estado_combo')
 
 
-def test_window_central_widget_exists(window):
-    """
-    Test 4: Verifica que la ventana tiene un widget central.
-    """
-    central_widget = window.centralWidget()
-    assert central_widget is not None
+def test_window_has_buttons(window):
+    """Test 4: Verifica que los botones existen"""
+    assert hasattr(window, 'guardar_btn')
+    assert hasattr(window, 'limpiar_btn')
 
 
-def test_window_close_cleanly(window):
-    """
-    Test 5: Verifica que la ventana se cierra limpiamente.
-    """
-    window.close()
-    assert True
+def test_save_shipment_validates_fields(window):
+    """Test 5: Verifica que valida campos obligatorios"""
+    window.destinatario_input.clear()
+    window.direccion_input.clear()
+    initial_count = window.table.rowCount()
+    window._save_shipment()
+    assert window.table.rowCount() == initial_count
 
 
-def test_window_is_resizable(window):
-    """
-    Test 6: Verifica que la ventana se puede redimensionar.
-    """
-    initial_size = window.size()
-    window.resize(1200, 800)
-    new_size = window.size()
-    assert new_size.width() == 1200
-    assert new_size.height() == 800
+def test_save_shipment_adds_row(window):
+    """Test 6: Verifica que guardar añade una fila"""
+    initial_count = window.table.rowCount()
+    window.destinatario_input.setText("Test User")
+    window.direccion_input.setText("Test Address")
+    window._save_shipment()
+    assert window.table.rowCount() == initial_count + 1
+
+
+def test_clear_form_clears_fields(window):
+    """Test 7: Verifica que limpiar el formulario funciona"""
+    window.destinatario_input.setText("Test")
+    window.direccion_input.setText("Test")
+    window._clear_form()
+    assert window.destinatario_input.text() == ""
+    assert window.direccion_input.text() == ""
