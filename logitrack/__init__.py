@@ -1,5 +1,7 @@
-from .main import LogiTrackWindow
+#!/usr/bin/env python3
+"""
+LogiTrack Desktop - Estación de Control Logístico de Escritorio
+"""
 
-"""LogiTrack Desktop - Estación de Control Logístico de Escritorio"""
-__version__ = "0.1.0"
-__all__ = ['LogiTrackWindow']
+__version__ = "0.6.0"
+__app_name__ = "LogiTrack Desktop"
